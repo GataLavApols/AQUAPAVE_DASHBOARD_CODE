@@ -1,0 +1,16 @@
+{
+  "rules": {
+    "aquapave": {
+      ".read": true,
+      ".write": false
+    },
+    "filter": {
+      ".read": true,
+      ".write": false
+    },
+    "upper_tank": {
+      ".read": true,
+      ".write": false
+    }
+  }
+}
