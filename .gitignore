@@ -1,0 +1,10 @@
+# Firmware is intentionally excluded from this public repository.
+# It contains WiFi credentials and device secrets.
+/firmware/
+
+# Dependencies
+node_modules/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db

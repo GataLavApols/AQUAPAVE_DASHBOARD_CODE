@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AquaPave AI Dashboard</title>
+    <link rel="stylesheet" href="style.css" />
+    <!-- Chart.js for line and doughnut charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- Firebase Realtime Database (compat build, no bundler needed) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar__logo">AquaPave AI</div>
+        <nav class="sidebar__nav">
+          <button
+            class="sidebar__nav-item sidebar__nav-item--active"
+            data-tab="overview"
+          >
+            Overview
+          </button>
+          <button class="sidebar__nav-item" data-tab="water">
+            Water Level Monitoring
+          </button>
+          <button class="sidebar__nav-item" data-tab="filter">
+            Filter Quality Monitoring
+          </button>
+        </nav>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div class="topbar__left">
+            <h1 class="topbar__title">AquaPave AI Dashboard</h1>
+            <p class="topbar__subtitle">
+              Live data streamed from the Firebase Realtime Database
+            </p>
+          </div>
+          <div class="topbar__right">
+            <div class="topbar__connection">
+              <label>Firebase Realtime Database</label>
+              <span id="firebase-status" class="topbar__status">
+                Connecting to Firebase…
+              </span>
+              <span id="firebase-last-update" class="card__sub">
+                Waiting for first reading
+              </span>
+            </div>
+          </div>
+        </header>
+
+        <!-- Overview view -->
+        <section id="view-overview" class="view view--active">
+          <div class="grid">
+            <!-- KPI cards -->
+            <div class="card card--kpi">
+              <div class="card__label">Turbidity</div>
+              <div class="card__value-row">
+                <span id="turb-value" class="card__value">-- NTU</span>
+                <span id="turb-trend" class="card__trend">--</span>
+                <span id="turb-clarity" class="status-pill">--</span>
+              </div>
+            </div>
+
+            <div class="card card--kpi">
+              <div class="card__label">pH</div>
+              <div class="card__value-row">
+                <span id="ph-value" class="card__value">--</span>
+                <span id="ph-trend" class="card__trend">--</span>
+              </div>
+            </div>
+
+            <div class="card card--kpi">
+              <div class="card__label">TDS</div>
+              <div class="card__value-row">
+                <span id="tds-value" class="card__value">-- mg/L</span>
+                <span id="tds-trend" class="card__trend">--</span>
+              </div>
+            </div>
+
+            <!-- Circular gauge for water level -->
+            <div class="card card--gauge">
+              <div class="card__header">
+                <div>
+                  <div class="card__label">Water level</div>
+                  <div class="card__sub">
+                    Ultrasonic: level (cm) = tank height − distance
+                  </div>
+                </div>
+              </div>
+              <div class="gauge">
+                <canvas id="waterlevel-chart"></canvas>
+                <div class="gauge__center">
+                  <span id="waterlevel-value" class="gauge__value">-- %</span>
+                  <span class="gauge__label">Water level</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Line chart main panel -->
+            <div class="card card--wide">
+              <div class="card__header">
+                <div>
+                  <div class="card__label">Sensor history</div>
+                  <div class="card__sub">Last 5 minutes</div>
+                </div>
+                <div class="card__header-controls">
+                  <select id="time-range">
+                    <option value="300">Last 5 minutes</option>
+                    <option value="900">Last 15 minutes</option>
+                    <option value="3600">Last hour</option>
+                  </select>
+                  <button id="pause-btn" class="secondary">Pause</button>
+                </div>
+              </div>
+              <canvas id="history-chart"></canvas>
+            </div>
+
+            <!-- Recent readings list -->
+            <div class="card card--list">
+              <div class="card__header">
+                <div class="card__label">Recent readings</div>
+              </div>
+              <ul id="recent-readings" class="reading-list"></ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- Water Level Monitoring view -->
+        <section id="view-water" class="view">
+          <div class="grid">
+            <div class="card card--kpi card--live">
+              <div class="card__label">Live water level</div>
+              <div class="card__value-row">
+                <span id="wl-current" class="card__value">-- %</span>
+                <span id="wl-trend" class="card__trend">--</span>
+              </div>
+            </div>
+
+            <div class="card card--kpi card--live">
+              <div class="card__label">Live ultrasonic distance</div>
+              <div class="card__value-row">
+                <span id="dist-current" class="card__value">-- cm</span>
+                <span id="dist-trend" class="card__trend">--</span>
+              </div>
+            </div>
+
+            <div class="card card--kpi card--live">
+              <div class="card__label">Predicted water level (10s)</div>
+              <div class="card__value-row">
+                <span id="wl-predicted" class="card__value">-- cm</span>
+                <span id="wl-prediction-state" class="status-pill status-pill--unknown">Waiting</span>
+              </div>
+              <div class="card__meta">
+                <span>Current: <span id="wl-current-cm">--</span> cm</span>
+                <span>Rate: <span id="wl-rate">--</span> cm/s</span>
+              </div>
+              <p class="card__sub card__sub--tight">
+                Tank height:
+                <span id="wl-tank-height">--</span> cm 
+              </p>
+            </div>
+
+            <div class="card card--kpi card--live">
+              <div class="card__label">Water flow</div>
+              <div class="card__value-row">
+                <span id="wl-flow" class="card__value">-- L/min</span>
+                <span id="wl-flow-trend" class="card__trend">--</span>
+              </div>
+            </div>
+
+            <div class="card card--kpi card--live">
+              <div class="card__label">Valve status</div>
+              <div class="card__value-row">
+                <span id="wl-valve" class="status-pill status-pill--unknown">--</span>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- Filter Quality Monitoring view -->
+        <section id="view-filter" class="view">
+          <div class="grid">
+            <div class="card card--kpi card--live">
+              <div class="card__label">Turbidity</div>
+              <div class="card__value-row">
+                <span id="f-turb-value" class="card__value">-- NTU</span>
+                <span id="f-turb-trend" class="card__trend">--</span>
+                <span id="f-turb-clarity" class="status-pill">--</span>
+              </div>
+            </div>
+
+            <div class="card card--kpi card--live">
+              <div class="card__label">pH</div>
+              <div class="card__value-row">
+                <span id="f-ph-value" class="card__value">--</span>
+                <span id="f-ph-trend" class="card__trend">--</span>
+              </div>
+            </div>
+
+            <div class="card card--kpi card--live">
+              <div class="card__label">TDS</div>
+              <div class="card__value-row">
+                <span id="f-tds-value" class="card__value">-- mg/L</span>
+                <span id="f-tds-trend" class="card__trend">--</span>
+              </div>
+            </div>
+
+            <div id="f-quality-card" class="card card--kpi card--live">
+              <div class="card__label">Filter prediction (model output)</div>
+              <div class="card__value-row">
+                <span id="f-quality-predicted" class="card__value">--</span>
+              </div>
+            </div>
+
+            <div class="card card--kpi card--live">
+              <div class="card__label">Water level (quality board)</div>
+              <div class="card__value-row">
+                <span id="f-wl-value" class="card__value">-- cm</span>
+                <span id="f-wl-trend" class="card__trend">--</span>
+              </div>
+            </div>
+
+           
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.dual.js"></script>
+  </body>
+</html>
+

@@ -1,0 +1,11 @@
+{
+  "name": "esp32-sensor-dashboard",
+  "version": "1.0.0",
+  "description": "Lightweight web dashboard for visualizing ESP32 sensor data with charts and KPIs.",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
+
