@@ -359,17 +359,34 @@ function renderRecent() {
   state.devices.quality.history.slice(-4).forEach((s) => merged.push({ type: 'Quality', s }));
   merged.sort((a, b) => b.s.timestamp - a.s.timestamp);
 
-  elements.recentList.innerHTML = '';
+  elements.recentList.textContent = '';
   merged.slice(0, 8).forEach((item) => {
     const li = document.createElement('li');
     li.className = 'reading-list__item';
-    li.innerHTML = `
-      <div class="reading-list__left">
-        <span class="reading-list__values">${item.type === 'Level' ? `Level ${(item.s.waterLevel * 100).toFixed(0)}% • Distance ${typeof item.s.distanceCm === 'number' ? item.s.distanceCm.toFixed(1) : '--'} cm` : `${item.s.turbidity.toFixed(2)} NTU • pH ${item.s.ph.toFixed(2)} • ${item.s.tds.toFixed(0)} mg/L`}</span>
-        <span class="reading-list__timestamp">${formatTime(item.s.timestamp)}</span>
-      </div>
-      <span class="reading-list__badge">${item.type}</span>
-    `;
+
+    const left = document.createElement('div');
+    left.className = 'reading-list__left';
+
+    const values = document.createElement('span');
+    values.className = 'reading-list__values';
+    values.textContent =
+      item.type === 'Level'
+        ? `Level ${(item.s.waterLevel * 100).toFixed(0)}% \u2022 Distance ${typeof item.s.distanceCm === 'number' ? item.s.distanceCm.toFixed(1) : '--'} cm`
+        : `${item.s.turbidity.toFixed(2)} NTU \u2022 pH ${item.s.ph.toFixed(2)} \u2022 ${item.s.tds.toFixed(0)} mg/L`;
+
+    const timestamp = document.createElement('span');
+    timestamp.className = 'reading-list__timestamp';
+    timestamp.textContent = formatTime(item.s.timestamp);
+
+    left.appendChild(values);
+    left.appendChild(timestamp);
+
+    const badge = document.createElement('span');
+    badge.className = 'reading-list__badge';
+    badge.textContent = item.type;
+
+    li.appendChild(left);
+    li.appendChild(badge);
     elements.recentList.appendChild(li);
   });
 }

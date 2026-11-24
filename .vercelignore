@@ -1,0 +1,8 @@
+# Firmware must never be deployed: it contains WiFi credentials.
+/firmware/
+
+# Dead / non-runtime files
+/app.js
+/README.md
+/node_modules/
+/.vercel/
